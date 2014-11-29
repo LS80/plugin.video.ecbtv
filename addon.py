@@ -35,7 +35,7 @@ BASE_URL = HOST
 VIDEO_ID_RE = re.compile("/video/i/(\d+)/") 
 
 VIDEO_XML_FMT = (u"http://www.ecbtv.co.uk/page/sva/xmlHttpRequest/submit.xml"
-                 "?type=18&sites=11617&clipId={}")
+                 "?type=18&sites=11617&clipId={0}")
 
 plugin = Plugin()
 
@@ -77,7 +77,7 @@ def index():
     
 @plugin.route('/video/<video_id>')
 def play_video(video_id):
-    soup = get_soup(BASE_URL + "/video/i/{}".format(video_id))
+    soup = get_soup(BASE_URL + "/video/i/{0}".format(video_id))
     clip_id = soup.find('div', id='videoPlayer')['data-clipid']
 
     soup = get_soup(VIDEO_XML_FMT.format(clip_id))
