@@ -40,8 +40,8 @@ VIDEO_XML_FMT = (u"http://www.ecbtv.co.uk/page/sva/xmlHttpRequest/submit.xml"
 plugin = Plugin()
 
 def get_soup(url):
-    return BeautifulSoup(response.text, 'html5lib')
     response = requests.get(url)
+    return BeautifulSoup(response.text, 'html.parser')
 
 def get_videos(soup):
     for video in soup('div', 'videoListItem'):
