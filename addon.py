@@ -37,14 +37,11 @@ VIDEO_ID_RE = re.compile("/video/i/(\d+)/")
 VIDEO_XML_FMT = (u"http://www.ecbtv.co.uk/page/sva/xmlHttpRequest/submit.xml"
                  "?type=18&sites=11617&clipId={}")
 
-HEADERS = {'User-agent': "Mozilla/5.0"}
-
-
 plugin = Plugin()
 
 def get_soup(url):
-    response = requests.get(url, headers=HEADERS)
     return BeautifulSoup(response.text, 'html5lib')
+    response = requests.get(url)
 
 def get_videos(soup):
     for video in soup('div', 'videoListItem'):
