@@ -24,7 +24,7 @@ from urlparse import urlparse, urlunparse, urljoin
 from datetime import date, timedelta
 import time
 
-from xbmcswift2 import Plugin
+from kodiswift import Plugin
 from bs4 import BeautifulSoup
 import requests
 
