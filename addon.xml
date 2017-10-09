@@ -12,9 +12,9 @@
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
     <language>en</language>
-    <summary>Watch videos from ECB TV</summary>
-    <description>This video plugin provides access to the videos from the official site of the England and Wales Cricket Board.</description>
-    <website>http://www.ecbtv.co.uk</website>
+    <summary lang="en_gb">Watch videos from ECB TV</summary>
+    <description lang="en_gb">This video plugin provides access to the videos from the official site of the England and Wales Cricket Board.</description>
+    <website>http://www.ecb.co.uk</website>
     <source>https://github.com/LS80/plugin.video.ecbtv.git</source>
     <license>GNU GENERAL PUBLIC LICENSE. Version 3, 29 June 2007</license>
   </extension>
