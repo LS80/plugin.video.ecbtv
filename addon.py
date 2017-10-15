@@ -35,14 +35,13 @@ plugin = Plugin()
 def items(path):
     for video in api.videos(path):
         yield {
-            'label': video.title,
             'thumbnail': video.thumbnail,
             'path': video.url,
             'info': {
                 'title': video.title,
-                'date': video.date.strftime('%d.%m.%Y')
+                'date': video.date.strftime('%d.%m.%Y'),
+                'duration': video.duration
             },
-            'stream_info': {'video': {'duration': video.duration}},
             'is_playable': True
         }
 
