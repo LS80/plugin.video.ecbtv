@@ -32,8 +32,8 @@ from resources.lib import api
 plugin = Plugin()
 
 
-def items(path):
-    for video in api.videos(path):
+def items(videos):
+    for video in videos:
         yield {
             'thumbnail': video.thumbnail,
             'path': video.url,
@@ -47,6 +47,8 @@ def items(path):
 
 
 def categories():
+    yield {'label': "[B]{}[/B]".format(plugin.get_string(30001)),
+           'path': plugin.url_for('search')}
     for title, path in api.categories():
         yield {'label': title, 'path': plugin.url_for('show_videos', path=path)}
 
@@ -58,7 +60,26 @@ def index():
 
 @plugin.route('/category/<path>')
 def show_videos(path):
-    return plugin.finish(items(path), sort_methods=['playlist_order', 'date', 'title', 'duration'])
+    return plugin.finish(
+        items(api.videos(path)),
+        sort_methods=['playlist_order', 'date', 'title', 'duration']
+    )
+
+
+@plugin.route('/search')
+def search():
+    query = plugin.keyboard(heading=plugin.get_string(30001))
+    if query:
+        url = plugin.url_for('search_result', query=query)
+        plugin.redirect(url)
+
+
+@plugin.route('/search/<query>')
+def search_result(query):
+    return plugin.finish(
+        items(api.search_results(query, size=11)),
+        sort_methods=['playlist_order', 'date', 'title', 'duration']
+    )
 
 
 if __name__ == '__main__':

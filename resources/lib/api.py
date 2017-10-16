@@ -30,7 +30,8 @@ Module for extracting video links from the England and Wales Cricket Board websi
 
 import json
 import os
-from urlparse import urljoin
+from urlparse import urljoin, urlparse, urlunparse
+from urllib import urlencode
 from datetime import datetime
 import time
 from collections import namedtuple
@@ -44,7 +45,24 @@ BASE_URL = urljoin(HOST, 'tv/')
 HLS_HOST = 'https://secure.brightcove.com/'
 HLS_URL_FMT = urljoin(HLS_HOST, 'services/mobile/streaming/index/master.m3u8?videoId={}')
 
+SEARCH_URL = 'https://content-ecb.pulselive.com/search/ecb/'
+
+
 Video = namedtuple('Video', 'title url thumbnail date duration')
+
+
+def _search_url(term, start, size):
+    '''Returns a URL for the JSON search api'''
+    url_parts = list(urlparse(SEARCH_URL))
+    query_params = dict(
+        type='VIDEO',
+        fullObjectResponse=True,
+        terms=term,
+        size=size,
+        start=start
+    )
+    url_parts[4] = urlencode(query_params)
+    return urlunparse(url_parts)
 
 
 def _soup(path=''):
@@ -54,11 +72,30 @@ def _soup(path=''):
     return BeautifulSoup(response.text, 'html.parser')
 
 
-def _date(media_item):
-    '''Returns a date object from the media item.
+def _date_from_str(date_str, fmt='%d %B %Y'):
+    '''Returns a data object from a string.
        datetime.strptime is avoided due to a Python issue in Kodi'''
+    return datetime(*(time.strptime(date_str, fmt)[0:6])).date()
+
+
+def _date(media_item):
+    '''Returns a date object from the HTML media item.'''
     date_str = media_item.find('time', 'media__sub-meta').string
-    return datetime(*(time.strptime(date_str, '%d %B %Y')[0:6])).date()
+    return _date_from_str(date_str)
+
+
+def _date_json(json_item):
+    '''Returns a date object from the JSON item.
+       The date can be one of two formats'''
+    date_str = json_item['date']
+    for fmt in ['%Y-%m-%dT%H:%M', '%d/%m/%Y %H:%M']:
+        try:
+            date = _date_from_str(date_str.strip(), fmt=fmt)
+        except ValueError as exc:
+            continue
+        else:
+            return date
+    raise exc
 
 
 def categories():
@@ -77,21 +114,44 @@ def videos(path):
     for media_item in _soup(path)('a', 'media__item'):
         video = json.loads(media_item['data-ui-args'])
         yield Video(
-            media_item.find('span', 'media__title').string,
-            HLS_URL_FMT.format(video['mediaId']),
-            media_item.picture.img['data-highres-img'],
-            _date(media_item),
-            int(video['duration'].replace(',', ''))
+            title=media_item.find('span', 'media__title').string,
+            url=HLS_URL_FMT.format(video['mediaId']),
+            thumbnail=media_item.picture.img['data-highres-img'],
+            date=_date(media_item),
+            duration=int(video['duration'].replace(',', ''))
         )
 
 
-def _main():
+def search_results(term, start=0, size=10):
+    '''Generator for videos matching a search term'''
+    results = requests.get(_search_url(term, start, size)).json()['hits']['hit']
+    for result in results:
+        video = result['response']
+        yield Video(
+            title=video['title'],
+            url=HLS_URL_FMT.format(video['mediaId']),
+            thumbnail=video['imageUrl'],
+            date=_date_json(video),
+            duration=video['duration']
+        )
+
+
+def _print_all_videos():
     '''Test function to print all categories and videos'''
     for title, path in categories():
-        print title, path
+        print '{} ({})'.format(title, path)
         for video in videos(path):
-            print '\t', video
+            print '\t', video.title
+
+
+def _print_search_results(term):
+    '''Test function to print search results'''
+    print 'Search: {}'.format(term)
+    for video in search_results(term):
+        print '\t', video.title
 
 
 if __name__ == '__main__':
-    _main()
+    _print_all_videos()
+    print
+    _print_search_results('test cricket')
