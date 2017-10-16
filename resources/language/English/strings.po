@@ -1,4 +1,0 @@
-# Kodi Media Center language file
-# Addon Name: ECB TV
-# Addon id: plugin.video.ecbtv
-# Addon Provider: Leopold

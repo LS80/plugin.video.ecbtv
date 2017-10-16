@@ -17,5 +17,9 @@
     <website>http://www.ecb.co.uk</website>
     <source>https://github.com/LS80/plugin.video.ecbtv.git</source>
     <license>MIT</license>
+    <assets>
+      <icon>resources/icon.png</icon>
+      <fanart>resources/fanart.jpg</fanart>
+    </assets>
   </extension>
 </addon>
