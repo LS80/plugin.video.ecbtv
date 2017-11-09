@@ -28,17 +28,60 @@ from kodiswift import Plugin
 
 from resources.lib import api
 
+import functools
+
+
+PAGE_SIZE = 9
 
 plugin = Plugin()
 
 
-def items(videos):
+def categories():
+    yield {'label': '[B]{}[/B]'.format(plugin.get_string(30002)),
+           'path': plugin.url_for('show_all_videos_first_page')}
+    yield {'label': '[B]{}[/B]'.format(plugin.get_string(30001)),
+           'path': plugin.url_for('search')}
+    yield {'label': 'England',
+           'path': plugin.url_for('show_videos_first_page', reference=api.england().reference)}
+    yield {'label': 'Counties',
+           'path': plugin.url_for('show_counties')}
+    yield {'label': 'Players',
+           'path': plugin.url_for('show_player_categories')}
+
+
+def subcategories(generator, route):
+    for category in generator():
+        yield {'label': category,
+               'path': plugin.url_for(route, category=category)}
+
+
+def entities(generator):
+    for entity in generator():
+        yield {'label': entity.name,
+               'thumbnail': entity.thumbnail,
+               'path': plugin.url_for('show_videos_first_page', reference=entity.reference)}
+
+
+def items(func, route, page, **kwargs):
+    videos, npages = func(page=page, page_size=PAGE_SIZE, **kwargs)
+
+    if page > 1:
+        yield {
+            'label': u"<< {} ({})".format(plugin.get_string(30003), page - 1),
+            'path': plugin.url_for(route, page=page - 1, **kwargs)
+        }
+    if page < npages:
+        yield {
+            'label': u"{} ({}) >>".format(plugin.get_string(30004), page + 1),
+            'path': plugin.url_for(route, page=page + 1, **kwargs)
+        }
+
     for video in videos:
         yield {
+            'label': video.title,
             'thumbnail': video.thumbnail,
             'path': video.url,
             'info': {
-                'title': video.title,
                 'date': video.date.strftime('%d.%m.%Y'),
                 'duration': video.duration
             },
@@ -46,40 +89,64 @@ def items(videos):
         }
 
 
-def categories():
-    yield {'label': "[B]{}[/B]".format(plugin.get_string(30001)),
-           'path': plugin.url_for('search')}
-    for title, path in api.categories():
-        yield {'label': title, 'path': plugin.url_for('show_videos', path=path)}
+def show(func, route, page, **kwargs):
+    return plugin.finish(
+        items(func, route, page, **kwargs),
+        sort_methods=['playlist_order', 'date', 'title', 'duration'],
+        update_listing=page > 1
+    )
 
 
 @plugin.route('/')
 def index():
-    return plugin.finish(categories())
+    return plugin.finish(list(categories()))
 
 
-@plugin.route('/category/<path>')
-def show_videos(path):
+@plugin.route('/counties')
+def show_counties():
+    return plugin.finish(entities(api.counties), sort_methods=['label'])
+
+
+@plugin.route('/players')
+def show_player_categories():
     return plugin.finish(
-        items(api.videos(path)),
-        sort_methods=['playlist_order', 'date', 'title', 'duration']
+        subcategories(api.player_categories, 'show_players'),
+        sort_methods=['label']
     )
+
+
+@plugin.route('/players/<category>')
+def show_players(category):
+    return plugin.finish(
+        entities(functools.partial(api.players, category)),
+        sort_methods=['label']
+    )
+
+
+@plugin.route('/videos/all', name='show_all_videos_first_page')
+@plugin.route('/videos/all/<page>')
+def show_all_videos(page='1'):
+    return show(api.videos, 'show_all_videos', int(page))
+
+
+@plugin.route('/videos/<reference>', name='show_videos_first_page')
+@plugin.route('/videos/<reference>/<page>')
+def show_videos(reference, page='1'):
+    return show(api.videos, 'show_videos', int(page), reference=reference)
 
 
 @plugin.route('/search')
 def search():
-    query = plugin.keyboard(heading=plugin.get_string(30001))
-    if query:
-        url = plugin.url_for('search_result', query=query)
+    term = plugin.keyboard(heading=plugin.get_string(30001))
+    if term:
+        url = plugin.url_for('show_search_results_first_page', term=term)
         plugin.redirect(url)
 
 
-@plugin.route('/search/<query>')
-def search_result(query):
-    return plugin.finish(
-        items(api.search_results(query, size=11)),
-        sort_methods=['playlist_order', 'date', 'title', 'duration']
-    )
+@plugin.route('/search/<term>', name='show_search_results_first_page')
+@plugin.route('/search/<term>/<page>')
+def show_search_results(term, page='1'):
+    return show(api.search_results, 'show_search_results', int(page), term=term)
 
 
 if __name__ == '__main__':
