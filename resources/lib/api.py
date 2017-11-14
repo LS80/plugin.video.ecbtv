@@ -52,7 +52,7 @@ SEARCH_URL = 'https://content-ecb.pulselive.com/search/ecb/'
 VIDEO_LIST_URL = 'https://content-ecb.pulselive.com/content/ecb/EN/'
 
 Video = namedtuple('Video', 'title url thumbnail date duration')
-Entity = namedtuple('Entity', 'name id reference thumbnail')
+Entity = namedtuple('Entity', 'name reference thumbnail')
 
 
 def _video_list_url(reference, page, page_size=10):
@@ -119,7 +119,6 @@ def _thumbnail_variant(video):
 def england():
     return Entity(
         name='England',
-        id=11,
         reference='cricket_team:11',
         thumbnail=None
     )
@@ -130,7 +129,6 @@ def counties():
         team_id = int(os.path.basename(county.a['href']))
         yield Entity(
             name=county.a.text,
-            id=team_id,
             reference='cricket_team:{}'.format(team_id),
             thumbnail=county.img['src']
         )
@@ -139,7 +137,11 @@ def counties():
 def player_categories():
     for tab in _soup('/england/men/players').find_all(
             'div', attrs={'data-ui-args': re.compile(r'{ "title": "\w+" }')}):
-        yield tab['data-ui-tab']
+        yield Entity(
+            name=tab['data-ui-tab'],
+            reference=None,
+            thumbnail=None
+        )
 
 
 def players(category='Test'):
@@ -148,7 +150,6 @@ def players(category='Test'):
         player_id = player.img['data-player']
         yield Entity(
             name=player.img['alt'],
-            id=player_id,
             reference='cricket_player:{}'.format(player_id),
             thumbnail=PLAYER_THUMB_URL_FMT.format(category.lower(), player_id)
         )
