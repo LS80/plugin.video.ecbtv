@@ -237,26 +237,3 @@ def search_results(term, page=1, page_size=10):
     total = search_results_json['hits']['found']
     npages = int(math.ceil(float(total) / page_size))
     return _search_results(search_results_json), npages
-
-
-def _print_team_videos():
-    '''Test function to print all categories and videos'''
-    for team in [england()] + list(counties()):
-        print '{} ({})'.format(team.name, team.reference)
-        videos_page, _num_pages = videos(team.reference)
-        for video in videos_page:
-            print '\t', video.title
-
-
-def _print_search_results(term):
-    '''Test function to print search results'''
-    print 'Search: {}'.format(term)
-    videos_page, _num_pages = search_results(term)
-    for video in videos_page:
-        print '\t', video.title
-
-
-if __name__ == '__main__':
-    _print_team_videos()
-    print
-    _print_search_results('test cricket')
