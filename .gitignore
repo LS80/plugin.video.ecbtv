@@ -1,5 +1,4 @@
 *.pyc
 *.pyo
 *~
-.settings
-.pydevproject
+Pipfile.lock

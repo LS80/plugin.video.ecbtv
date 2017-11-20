@@ -32,7 +32,7 @@ import os
 import re
 from urlparse import urljoin, urlparse, urlunparse
 from urllib import urlencode
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import time
 from collections import namedtuple
 import math
@@ -50,9 +50,10 @@ PLAYER_THUMB_URL_FMT = 'https://ecb-resources.s3.amazonaws.com/player-photos/{}/
 
 SEARCH_URL = 'https://content-ecb.pulselive.com/search/ecb/'
 VIDEO_LIST_URL = 'https://content-ecb.pulselive.com/content/ecb/EN/'
+TOURNAMENTS_URL = 'https://cricketapi-ecb.pulselive.com/tournaments/'
 
 Video = namedtuple('Video', 'title url thumbnail date duration')
-Entity = namedtuple('Entity', 'name reference thumbnail')
+Entity = namedtuple('Entity', 'name id reference thumbnail')
 
 
 def _video_list_url(reference, page, page_size=10):
@@ -78,6 +79,24 @@ def _search_url(term, page, page_size=10):
         size=page_size,
         start=(page - 1) * page_size
     )
+    url_parts[4] = urlencode(query_params)
+    return urlunparse(url_parts)
+
+
+def _tournaments_url(team_ids,
+                     match_types,
+                     weeks_ago,
+                     weeks_ahead):
+    url_parts = list(urlparse(TOURNAMENTS_URL))
+    query_params = dict(
+        teamIds=','.join(map(str, team_ids)),
+        startDate=date.today() - timedelta(weeks=weeks_ago),
+        endDate=date.today() + timedelta(weeks=weeks_ahead),
+        sort='desc')
+    if match_types is not None:
+        query_params['matchTypes'] = ','.join(
+            str(t).replace(' ', '_').upper() for t in match_types
+        )
     url_parts[4] = urlencode(query_params)
     return urlunparse(url_parts)
 
@@ -119,6 +138,7 @@ def _thumbnail_variant(video):
 def england():
     return Entity(
         name='England',
+        id=11,
         reference='cricket_team:11',
         thumbnail=None
     )
@@ -129,6 +149,7 @@ def counties():
         team_id = int(os.path.basename(county.a['href']))
         yield Entity(
             name=county.a.text,
+            id=team_id,
             reference='cricket_team:{}'.format(team_id),
             thumbnail=county.img['src']
         )
@@ -139,6 +160,7 @@ def player_categories():
             'div', attrs={'data-ui-args': re.compile(r'{ "title": "\w+" }')}):
         yield Entity(
             name=tab['data-ui-tab'],
+            id=None,
             reference=None,
             thumbnail=None
         )
@@ -150,9 +172,34 @@ def players(category='Test'):
         player_id = player.img['data-player']
         yield Entity(
             name=player.img['alt'],
+            id=player_id,
             reference='cricket_player:{}'.format(player_id),
             thumbnail=PLAYER_THUMB_URL_FMT.format(category.lower(), player_id)
         )
+
+
+def _tournaments(team_ids,
+                 match_types=None,
+                 weeks_ago=26,
+                 weeks_ahead=4):
+    url = _tournaments_url(team_ids, match_types, weeks_ago, weeks_ahead)
+    for tournament in requests.get(url).json()['content']:
+        yield Entity(
+            name=tournament['description'],
+            id=tournament['id'],
+            thumbnail=None,
+            reference='cricket_tournament:{}'.format(tournament['id'])
+        )
+
+
+def england_tournaments():
+    return _tournaments([england().id], ['Test', 'ODI', 'T20I'])
+
+
+def county_tournaments():
+    for tournament in _tournaments([county.id for county in counties()], weeks_ahead=0):
+        if not re.search(' in [A-Z]', tournament.name):
+            yield tournament
 
 
 def _video(video):

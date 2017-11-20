@@ -24,6 +24,8 @@
 #
 ###############################################################################
 
+import itertools
+
 from kodiswift import Plugin
 
 from resources.lib import api
@@ -34,18 +36,26 @@ PAGE_SIZE = 9
 plugin = Plugin(addon_id='plugin.video.ecbtv')
 
 
+def tournaments():
+    return itertools.chain(
+        itertools.islice(api.england_tournaments(), 3),
+        api.county_tournaments()
+    )
+
+
 def top_level_categories():
-    yield {'label': u'[B]{}[/B]'.format(plugin.get_string(30002)),
+    for tournament in tournaments():
+        yield {'label': tournament.name,
+               'path': plugin.url_for('show_videos_by_reference_first_page',
+                                      reference=tournament.reference)}
+    yield {'label': plugin.get_string(30002),
            'path': plugin.url_for('show_all_videos_first_page')}
-    yield {'label': u'[B]{}[/B]'.format(plugin.get_string(30001)),
-           'path': plugin.url_for('search')}
-    yield {'label': 'England',
+    yield {'label': plugin.get_string(30005),
            'path': plugin.url_for('show_videos_by_reference_first_page',
                                   reference=api.england().reference)}
-    yield {'label': 'Counties',
-           'path': plugin.url_for('show_counties')}
-    yield {'label': 'Players',
-           'path': plugin.url_for('show_player_categories')}
+    yield {'label': plugin.get_string(30006), 'path': plugin.url_for('show_player_categories')}
+    yield {'label': plugin.get_string(30007), 'path': plugin.url_for('show_counties')}
+    yield {'label': plugin.get_string(30001), 'path': plugin.url_for('search')}
 
 
 def subcategories(categories, route):
