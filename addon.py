@@ -25,8 +25,10 @@
 ###############################################################################
 
 import itertools
+import traceback
 
 from kodiswift import Plugin
+import rollbar.kodi
 
 from resources.lib import api
 
@@ -173,4 +175,13 @@ def search():
 
 
 if __name__ == '__main__':
-    plugin.run()
+    try:
+        plugin.run()
+    except Exception as exc:
+        if rollbar.kodi.error_report_requested(exc):
+            rollbar.kodi.report_error(
+                access_token='222e7ea9c2e74fd989c48b448a58978e',
+                version=plugin.addon.getAddonInfo('version'),
+                url=plugin.request.url
+            )
+        plugin.log.error(traceback.format_exc())
