@@ -30,8 +30,7 @@ Module for extracting video links from the England and Wales Cricket Board websi
 
 import os
 import re
-from urlparse import urljoin, urlparse, urlunparse
-from urllib import urlencode
+from urlparse import urljoin
 from datetime import datetime, date, timedelta
 import time
 from collections import namedtuple
@@ -56,38 +55,31 @@ Video = namedtuple('Video', 'title url thumbnail date duration')
 Entity = namedtuple('Entity', 'name id reference thumbnail')
 
 
-def _video_list_url(reference, page, page_size=10):
-    '''Returns a URL for a list of videos'''
-    url_parts = list(urlparse(VIDEO_LIST_URL))
-    query_params = dict(
+def _video_query_params(reference, page, page_size=10):
+    '''Returns a dictionary of query params for a list of videos'''
+    return dict(
         contentTypes='video',
         references=reference if reference is not None else '',
         page=page - 1,
         pageSize=page_size
     )
-    url_parts[4] = urlencode(query_params)
-    return urlunparse(url_parts)
 
 
-def _search_url(term, page, page_size=10):
-    '''Returns a URL for the JSON search api'''
-    url_parts = list(urlparse(SEARCH_URL))
-    query_params = dict(
+def _search_query_params(term, page, page_size=10):
+    '''Returns a dictionary of query params for the JSON search api'''
+    return dict(
         type='VIDEO',
         fullObjectResponse=True,
         terms=term,
         size=page_size,
         start=(page - 1) * page_size
     )
-    url_parts[4] = urlencode(query_params)
-    return urlunparse(url_parts)
 
 
-def _tournaments_url(team_ids,
-                     match_types,
-                     weeks_ago,
-                     weeks_ahead):
-    url_parts = list(urlparse(TOURNAMENTS_URL))
+def _tournaments_query_params(team_ids,
+                              match_types,
+                              weeks_ago,
+                              weeks_ahead):
     query_params = dict(
         teamIds=','.join(map(str, team_ids)),
         startDate=date.today() - timedelta(weeks=weeks_ago),
@@ -97,8 +89,7 @@ def _tournaments_url(team_ids,
         query_params['matchTypes'] = ','.join(
             str(t).replace(' ', '_').upper() for t in match_types
         )
-    url_parts[4] = urlencode(query_params)
-    return urlunparse(url_parts)
+    return query_params
 
 
 def _soup(path=''):
@@ -182,8 +173,10 @@ def _tournaments(team_ids,
                  match_types=None,
                  weeks_ago=26,
                  weeks_ahead=4):
-    url = _tournaments_url(team_ids, match_types, weeks_ago, weeks_ahead)
-    for tournament in requests.get(url).json()['content']:
+    for tournament in requests.get(
+            url=TOURNAMENTS_URL,
+            params=_tournaments_query_params(team_ids, match_types, weeks_ago, weeks_ahead)
+        ).json()['content']:
         yield Entity(
             name=tournament['description'],
             id=tournament['id'],
@@ -219,7 +212,10 @@ def _videos(videos_json):
 
 
 def videos(reference=None, page=1, page_size=10):
-    videos_json = requests.get(_video_list_url(reference, page, page_size)).json()
+    videos_json = requests.get(
+        url=VIDEO_LIST_URL,
+        params=_video_query_params(reference, page, page_size)
+    ).json()
     npages = videos_json['pageInfo']['numPages']
     return _videos(videos_json), npages
 
@@ -233,7 +229,10 @@ def _search_results(search_results_json):
 
 
 def search_results(term, page=1, page_size=10):
-    search_results_json = requests.get(_search_url(term, page, page_size)).json()
+    search_results_json = requests.get(
+        url=SEARCH_URL,
+        params=_search_query_params(term, page, page_size)
+    ).json()
     total = search_results_json['hits']['found']
     npages = int(math.ceil(float(total) / page_size))
     return _search_results(search_results_json), npages
