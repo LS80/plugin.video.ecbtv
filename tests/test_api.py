@@ -4,11 +4,11 @@ from resources.lib import api
 def test_county_videos():
     counties = list(api.counties())
     assert len(counties) == 18
-    for county in counties:
-        print county.name, county.id
-        videos, num_pages = api.videos(county.reference)
-        assert num_pages > 0
-        assert list(videos)
+    county = counties[0]
+    assert county.name and county.id
+    videos, num_pages = api.videos(county.reference)
+    assert num_pages > 0
+    assert list(videos)
 
 
 def test_england_videos():
@@ -31,9 +31,12 @@ def test_player_categories():
 
 
 def test_players():
-    players = api.players(category='Test')
+    players = list(api.players(category='Test'))
     assert players
     for player in players:
+        assert player.name
+        assert player.thumbnail
+        assert player.reference
         print player.name
         videos, num_pages = api.videos(player.reference)
         assert num_pages > 0
