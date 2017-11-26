@@ -51,8 +51,8 @@ SEARCH_URL = 'https://content-ecb.pulselive.com/search/ecb/'
 VIDEO_LIST_URL = 'https://content-ecb.pulselive.com/content/ecb/EN/'
 TOURNAMENTS_URL = 'https://cricketapi-ecb.pulselive.com/tournaments/'
 
-Video = namedtuple('Video', 'title url thumbnail date duration')
-Entity = namedtuple('Entity', 'name id reference thumbnail')
+_Video = namedtuple('Video', 'title url thumbnail date duration')
+_Entity = namedtuple('Entity', 'name id reference thumbnail')
 
 
 def _video_query_params(reference, page, page_size=10):
@@ -128,7 +128,7 @@ def _thumbnail_variant(video):
 
 def england():
     '''Returns an Entity for the England Men team'''
-    return Entity(
+    return _Entity(
         name='England',
         id=11,
         reference='cricket_team:11',
@@ -140,7 +140,7 @@ def counties():
     '''Generator for an Entity for each county team'''
     for county in _soup('/county-championship/teams')('div', 'partners__item'):
         team_id = int(os.path.basename(county.a['href']))
-        yield Entity(
+        yield _Entity(
             name=county.a.text,
             id=team_id,
             reference='cricket_team:{}'.format(team_id),
@@ -152,7 +152,7 @@ def player_categories():
     '''Generator for an Entity representing each form of the game'''
     for tab in _soup('/england/men/players').find_all(
             'div', attrs={'data-ui-args': re.compile(r'{ "title": "\w+" }')}):
-        yield Entity(
+        yield _Entity(
             name=tab['data-ui-tab'],
             id=None,
             reference=None,
@@ -165,7 +165,7 @@ def players(category='Test'):
     soup = _soup('/england/men/players').find('div', attrs={'data-ui-tab': category})
     for player in soup('section', 'profile-player-card'):
         player_id = player.img['data-player']
-        yield Entity(
+        yield _Entity(
             name=player.img['alt'],
             id=player_id,
             reference='cricket_player:{}'.format(player_id),
@@ -181,7 +181,7 @@ def _tournaments(team_ids,
             url=TOURNAMENTS_URL,
             params=_tournaments_query_params(team_ids, match_types, weeks_ago, weeks_ahead)
         ).json()['content']:
-        yield Entity(
+        yield _Entity(
             name=tournament['description'],
             id=tournament['id'],
             thumbnail=None,
@@ -202,7 +202,7 @@ def county_tournaments():
 
 
 def _video(video):
-    return Video(
+    return _Video(
         title=video['title'],
         url=HLS_URL_FMT.format(video['mediaId']),
         thumbnail=_thumbnail_variant(video),
