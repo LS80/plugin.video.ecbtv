@@ -80,6 +80,7 @@ def _tournaments_query_params(team_ids,
                               match_types,
                               weeks_ago,
                               weeks_ahead):
+    '''Returns a dictionary of query params for the list of tournaments'''
     query_params = dict(
         teamIds=','.join(map(str, team_ids)),
         startDate=date.today() - timedelta(weeks=weeks_ago),
@@ -111,15 +112,14 @@ def _date_json(json_item):
     date_str = json_item['date']
     for fmt in ['%Y-%m-%dT%H:%M', '%d/%m/%Y %H:%M']:
         try:
-            date = _date_from_str(date_str.strip(), fmt=fmt)
+            return _date_from_str(date_str.strip(), fmt=fmt)
         except ValueError as exc:
             continue
-        else:
-            return date
     raise exc
 
 
 def _thumbnail_variant(video):
+    '''Returns the url for the "Media Thumbnail - Squared Medium" thumbnail'''
     if video['thumbnail'] is None:
         return
     return (variant['url'] for variant in video['thumbnail']['variants']
@@ -127,6 +127,7 @@ def _thumbnail_variant(video):
 
 
 def england():
+    '''Returns an Entity for the England Men team'''
     return Entity(
         name='England',
         id=11,
@@ -136,6 +137,7 @@ def england():
 
 
 def counties():
+    '''Generator for an Entity for each county team'''
     for county in _soup('/county-championship/teams')('div', 'partners__item'):
         team_id = int(os.path.basename(county.a['href']))
         yield Entity(
@@ -147,6 +149,7 @@ def counties():
 
 
 def player_categories():
+    '''Generator for an Entity representing each form of the game'''
     for tab in _soup('/england/men/players').find_all(
             'div', attrs={'data-ui-args': re.compile(r'{ "title": "\w+" }')}):
         yield Entity(
@@ -158,6 +161,7 @@ def player_categories():
 
 
 def players(category='Test'):
+    '''Generator for England players currently playing in the provided form of the game'''
     soup = _soup('/england/men/players').find('div', attrs={'data-ui-tab': category})
     for player in soup('section', 'profile-player-card'):
         player_id = player.img['data-player']
@@ -186,10 +190,12 @@ def _tournaments(team_ids,
 
 
 def england_tournaments():
+    '''Returns a generator for all tournaments played by the England Men'''
     return _tournaments([england().id], ['Test', 'ODI', 'T20I'])
 
 
 def county_tournaments():
+    '''Generator for all tournaments played by a county, excluding tour matches'''
     for tournament in _tournaments([county.id for county in counties()], weeks_ahead=0):
         if not re.search(' in [A-Z]', tournament.name):
             yield tournament
@@ -212,6 +218,8 @@ def _videos(videos_json):
 
 
 def videos(reference=None, page=1, page_size=10):
+    '''Returns a generator for videos matching a reference string,
+       and the number of pages'''
     videos_json = requests.get(
         url=VIDEO_LIST_URL,
         params=_video_query_params(reference, page, page_size)
@@ -229,6 +237,7 @@ def _search_results(search_results_json):
 
 
 def search_results(term, page=1, page_size=10):
+    '''Returns a generator for search results and the number of pages'''
     search_results_json = requests.get(
         url=SEARCH_URL,
         params=_search_query_params(term, page, page_size)
